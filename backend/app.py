@@ -1,47 +1,44 @@
-from transformers import pipeline
-from transformers import CLIPProcessor, CLIPModel
-from PIL import Image
-import torch
+from flask import Flask, request, jsonify
+from models.text_model import analyze_text
+from models.image_model import analyze_image
 
-classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+app = Flask(__name__)
 
-sample_text = "Breaking: Scientists discover that eating chocolate every day can cure all diseases. A groundbreaking study published today reveals that consuming dark chocolate has miraculous health benefits that were previously unknown to medical science."
+@app.route('/analyze-text', methods=['POST'])
+def analyze_text_endpoint():
+    data = request.json
+    
+    if not data or 'text' not in data:
+        return jsonify({'error': 'Missing text field'}), 400
+    
+    text = data['text']
+    
+    try:
+        label, confidence = analyze_text(text)
+        return jsonify({
+            'label': label,
+            'confidence': round(confidence, 2)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-result = classifier(sample_text, candidate_labels=["fake news", "real news"])
+@app.route('/analyze-image', methods=['POST'])
+def analyze_image_endpoint():
+    data = request.json
+    
+    if not data or 'image_path' not in data:
+        return jsonify({'error': 'Missing image_path field'}), 400
+    
+    image_path = data['image_path']
+    
+    try:
+        label, confidence = analyze_image(image_path)
+        return jsonify({
+            'label': label,
+            'confidence': round(confidence, 2)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-label = result["labels"][0]
-confidence = result["scores"][0]
-
-
-if "fake" in label.lower():
-    prediction_label = "Fake"
-else:
-    prediction_label = "Real"
-
-
-print(f"Text Prediction: {prediction_label}")
-print(f"Text Confidence: {confidence:.2f}")
-
-image_path = "test_image.jpg"
-image = Image.open(image_path)
-
-processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
-model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
-
-candidate_descriptions = ["AI-generated image", "Real photograph"]
-
-inputs = processor(text=candidate_descriptions, images=image, return_tensors="pt", padding=True)
-
-with torch.no_grad():
-    outputs = model(**inputs)
-    logits_per_image = outputs.logits_per_image
-    probs = logits_per_image.softmax(dim=1)
-
-confidence_scores = probs[0].tolist()
-
-max_index = confidence_scores.index(max(confidence_scores))
-image_label = candidate_descriptions[max_index]
-image_confidence = confidence_scores[max_index]
-
-print(f"Image Prediction: {image_label}")
-print(f"Image Confidence: {image_confidence:.2f}")
+if __name__ == '__main__':
+    app.run(debug=True)
