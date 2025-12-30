@@ -1,6 +1,14 @@
 from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import spacy
 
 classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+tokenizer_style = AutoTokenizer.from_pretrained("hamzab/roberta-fake-news-classification")
+model_style = AutoModelForSequenceClassification.from_pretrained("hamzab/roberta-fake-news-classification")
+
+nlp = spacy.load("en_core_web_sm")
 
 def generate_text_explanation(label, confidence):
     if confidence >= 0.75:
@@ -15,6 +23,37 @@ def generate_text_explanation(label, confidence):
             return "The analysis suggests this content may be credible, but confidence is moderate. Additional verification is recommended."
     else:
         return "The analysis results are inconclusive. It is strongly recommended to verify this information through multiple reputable sources before making any decisions."
+
+def analyze_text_style(text):
+    inputs = tokenizer_style(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+    
+    with torch.no_grad():
+        outputs = model_style(**inputs)
+        predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    
+    confidence_scores = predictions[0].tolist()
+    max_index = confidence_scores.index(max(confidence_scores))
+    style_confidence = confidence_scores[max_index]
+    
+    if max_index == 1:
+        style_label = "Fake"
+    else:
+        style_label = "Real"
+    
+    return {
+        "style_label": style_label,
+        "style_confidence": style_confidence
+    }
+
+def extract_entities(text):
+    doc = nlp(text)
+    entities = []
+    
+    for ent in doc.ents:
+        if ent.label_ in ["PERSON", "ORG", "GPE"]:
+            entities.append(ent.text)
+    
+    return entities
 
 def analyze_text(text):
     result = classifier(text, candidate_labels=["fake news", "real news"])
