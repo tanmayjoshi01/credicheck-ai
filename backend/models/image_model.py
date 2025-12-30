@@ -1,9 +1,13 @@
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import torch
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
 model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
+
+clip_model = SentenceTransformer('clip-ViT-B-32')
 
 def generate_image_explanation(label, confidence):
     if confidence >= 0.75:
@@ -40,4 +44,27 @@ def analyze_image(image_path):
     explanation = generate_image_explanation(image_label, image_confidence)
     
     return image_label, image_confidence, explanation
+
+def verify_image_context(image_path, headline_text):
+    image = Image.open(image_path)
+    
+    image_embedding = clip_model.encode(image)
+    text_embedding = clip_model.encode(headline_text)
+    
+    image_embedding = image_embedding.reshape(1, -1)
+    text_embedding = text_embedding.reshape(1, -1)
+    
+    similarity = cosine_similarity(image_embedding, text_embedding)[0][0]
+    
+    if similarity < 0.20:
+        image_context = "Mismatch"
+    elif similarity >= 0.25:
+        image_context = "Consistent"
+    else:
+        image_context = "Mismatch"
+    
+    return {
+        "image_context": image_context,
+        "similarity_score": float(similarity)
+    }
 

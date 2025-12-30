@@ -3,3 +3,4 @@ torch
 pillow
 flask
 spacy
+sentence-transformers
