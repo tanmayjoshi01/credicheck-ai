@@ -1,12 +1,82 @@
 from flask import Flask, request, jsonify
-from models.text_model import analyze_text
-from models.image_model import verify_image_context
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from PIL import Image
+import spacy
+import torch
 import hashlib
 import time
 
 app = Flask(__name__)
 
 cache = {}
+
+# Load all models at startup
+print("Loading models...")
+text_tokenizer = AutoTokenizer.from_pretrained("hamzab/roberta-fake-news-classification")
+text_model = AutoModelForSequenceClassification.from_pretrained("hamzab/roberta-fake-news-classification")
+spacy_nlp = spacy.load("en_core_web_sm")
+clip_model = SentenceTransformer('clip-ViT-B-32')
+print("Models loaded successfully!")
+
+# Analysis functions using global models
+def analyze_text(text):
+    inputs = text_tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
+    
+    with torch.no_grad():
+        outputs = text_model(**inputs)
+        predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    
+    confidence_scores = predictions[0].tolist()
+    max_index = confidence_scores.index(max(confidence_scores))
+    score = round(float(confidence_scores[max_index]), 2)
+    
+    if max_index == 1:
+        label = "Fake"
+    else:
+        label = "Real"
+    
+    # Extract entities
+    doc = spacy_nlp(text)
+    entities = []
+    seen = set()
+    
+    for ent in doc.ents:
+        if ent.label_ in ["PERSON", "ORG", "GPE"]:
+            entity_text = ent.text
+            if entity_text not in seen:
+                entities.append(entity_text)
+                seen.add(entity_text)
+    
+    return {
+        "label": label,
+        "score": score,
+        "entities": entities
+    }
+
+def verify_image_context(image_path, headline_text):
+    image = Image.open(image_path)
+    
+    image_embedding = clip_model.encode(image)
+    text_embedding = clip_model.encode(headline_text)
+    
+    image_embedding = image_embedding.reshape(1, -1)
+    text_embedding = text_embedding.reshape(1, -1)
+    
+    similarity = cosine_similarity(image_embedding, text_embedding)[0][0]
+    
+    if similarity < 0.20:
+        image_context = "Mismatch"
+    elif similarity >= 0.25:
+        image_context = "Consistent"
+    else:
+        image_context = "Mismatch"
+    
+    return {
+        "image_context": image_context,
+        "similarity_score": float(similarity)
+    }
 
 @app.route('/analyze-text', methods=['POST'])
 def analyze_text_endpoint():
@@ -164,6 +234,13 @@ def analyze_full_endpoint():
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "API Active",
+        "models_loaded": True
+    })
 
 if __name__ == "__main__":
     app.run()
