@@ -4,3 +4,4 @@ pillow
 flask
 spacy
 sentence-transformers
+scikit-learn
