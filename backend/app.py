@@ -1,8 +1,12 @@
 from flask import Flask, request, jsonify
 from models.text_model import analyze_text
 from models.image_model import verify_image_context
+import hashlib
+import time
 
 app = Flask(__name__)
+
+cache = {}
 
 @app.route('/analyze-text', methods=['POST'])
 def analyze_text_endpoint():
@@ -44,6 +48,7 @@ def analyze_image_endpoint():
 
 @app.route('/analyze-full', methods=['POST'])
 def analyze_full_endpoint():
+    start_time = time.time()
     data = request.json
     
     if not data or 'text' not in data:
@@ -58,6 +63,18 @@ def analyze_full_endpoint():
     text = data['text']
     image_path = data['image_path']
     headline = data['headline']
+    
+    # Generate hash from inputs
+    hash_input = f"{text}{image_path}{headline}"
+    cache_key = hashlib.md5(hash_input.encode()).hexdigest()
+    
+    # Check cache
+    if cache_key in cache:
+        response_time_ms = (time.time() - start_time) * 1000
+        result = cache[cache_key].copy()
+        result['cache_hit'] = True
+        result['response_time_ms'] = round(response_time_ms, 2)
+        return jsonify(result)
     
     try:
         text_label, text_confidence, text_explanation = analyze_text(text)
@@ -98,11 +115,20 @@ def analyze_full_endpoint():
         
         final_trust_score = round(final_trust_score)
         
-        return jsonify({
+        response_time_ms = (time.time() - start_time) * 1000
+        
+        result = {
             'final_label': final_label,
             'final_trust_score': final_trust_score,
             'reason': reason
-        })
+        }
+        
+        cache[cache_key] = result.copy()
+        
+        result['cache_hit'] = False
+        result['response_time_ms'] = round(response_time_ms, 2)
+        
+        return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
