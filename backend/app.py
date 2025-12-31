@@ -7,6 +7,7 @@ import spacy
 import torch
 import hashlib
 import time
+from duckduckgo_search import DDGS
 
 app = Flask(__name__)
 
@@ -19,6 +20,29 @@ text_model = AutoModelForSequenceClassification.from_pretrained("hamzab/roberta-
 spacy_nlp = spacy.load("en_core_web_sm")
 clip_model = SentenceTransformer('clip-ViT-B-32')
 print("Models loaded successfully!")
+
+# Helper function for headline verification
+def verify_headline(headline):
+    trusted_domains = ["bbc", "reuters", "apnews", "npr", "gov", "edu"]
+    
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(headline, max_results=3))
+        
+        for result in results:
+            url = result.get('href', '').lower()
+            for domain in trusted_domains:
+                if domain in url:
+                    source_name = domain.capitalize()
+                    if domain == "gov":
+                        source_name = "Government"
+                    elif domain == "edu":
+                        source_name = "Educational"
+                    return f"Verified by {source_name}"
+        
+        return "Unverified claim"
+    except Exception:
+        return "Unverified claim"
 
 # Analysis functions using global models
 def analyze_text(text):
@@ -49,10 +73,14 @@ def analyze_text(text):
                 entities.append(entity_text)
                 seen.add(entity_text)
     
+    # Verify headline
+    verification_note = verify_headline(text)
+    
     return {
         "label": label,
         "score": score,
-        "entities": entities
+        "entities": entities,
+        "verification_note": verification_note
     }
 
 def verify_image_context(image_path, headline_text):
@@ -92,7 +120,8 @@ def analyze_text_endpoint():
         return jsonify({
             'label': result['label'],
             'score': round(result['score'], 2),
-            'entities': result['entities']
+            'entities': result['entities'],
+            'verification_note': result['verification_note']
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

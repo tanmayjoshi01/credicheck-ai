@@ -2,6 +2,7 @@ from transformers import pipeline
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import spacy
+from duckduckgo_search import DDGS
 
 classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
@@ -55,6 +56,28 @@ def extract_entities(text):
     
     return entities
 
+def verify_headline(headline):
+    trusted_domains = ["bbc", "reuters", "apnews", "npr", "gov", "edu"]
+    
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(headline, max_results=3))
+        
+        for result in results:
+            url = result.get('href', '').lower()
+            for domain in trusted_domains:
+                if domain in url:
+                    source_name = domain.capitalize()
+                    if domain == "gov":
+                        source_name = "Government"
+                    elif domain == "edu":
+                        source_name = "Educational"
+                    return f"Verified by {source_name}"
+        
+        return "Unverified claim"
+    except Exception:
+        return "Unverified claim"
+
 def analyze_text(text):
     inputs = tokenizer_style(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
     
@@ -83,9 +106,13 @@ def analyze_text(text):
                 entities.append(entity_text)
                 seen.add(entity_text)
     
+    # Verify headline
+    verification_note = verify_headline(text)
+    
     return {
         "label": label,
         "score": score,
-        "entities": entities
+        "entities": entities,
+        "verification_note": verification_note
     }
 
