@@ -12,6 +12,7 @@ from duckduckgo_search import DDGS
 app = Flask(__name__)
 
 cache = {}
+RESULTS_CACHE = {}
 
 # Load all models at startup
 print("Loading models...")
@@ -115,14 +116,36 @@ def analyze_text_endpoint():
     
     text = data['text']
     
+    # Generate MD5 hash of input text
+    text_hash = hashlib.md5(text.encode()).hexdigest()
+    
+    # Check cache
+    if text_hash in RESULTS_CACHE:
+        cached_result = RESULTS_CACHE[text_hash].copy()
+        cached_result['cached'] = True
+        return jsonify(cached_result)
+    
     try:
         result = analyze_text(text)
-        return jsonify({
+        
+        # Prepare response with same structure
+        response = {
+            'label': result['label'],
+            'score': round(result['score'], 2),
+            'entities': result['entities'],
+            'verification_note': result['verification_note'],
+            'cached': False
+        }
+        
+        # Store in cache (without cached flag)
+        RESULTS_CACHE[text_hash] = {
             'label': result['label'],
             'score': round(result['score'], 2),
             'entities': result['entities'],
             'verification_note': result['verification_note']
-        })
+        }
+        
+        return jsonify(response)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
