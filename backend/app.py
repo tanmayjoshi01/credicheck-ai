@@ -18,11 +18,11 @@ def analyze_text_endpoint():
     text = data['text']
     
     try:
-        label, confidence, explanation = analyze_text(text)
+        result = analyze_text(text)
         return jsonify({
-            'label': label,
-            'confidence': round(confidence, 2),
-            'explanation': explanation
+            'label': result['label'],
+            'score': round(result['score'], 2),
+            'entities': result['entities']
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -82,7 +82,9 @@ def analyze_full_endpoint():
         return jsonify(result)
     
     try:
-        text_label, text_confidence, text_explanation = analyze_text(text)
+        text_result = analyze_text(text)
+        text_label = text_result['label']
+        text_confidence = text_result['score']
         
         # Image analysis (skip if image_path not provided)
         image_context = None

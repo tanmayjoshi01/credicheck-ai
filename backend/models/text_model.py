@@ -56,17 +56,36 @@ def extract_entities(text):
     return entities
 
 def analyze_text(text):
-    result = classifier(text, candidate_labels=["fake news", "real news"])
+    inputs = tokenizer_style(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
     
-    label = result["labels"][0]
-    confidence = result["scores"][0]
+    with torch.no_grad():
+        outputs = model_style(**inputs)
+        predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
     
-    if "fake" in label.lower():
-        prediction_label = "Fake"
+    confidence_scores = predictions[0].tolist()
+    max_index = confidence_scores.index(max(confidence_scores))
+    score = round(float(confidence_scores[max_index]), 2)
+    
+    if max_index == 1:
+        label = "Fake"
     else:
-        prediction_label = "Real"
+        label = "Real"
     
-    explanation = generate_text_explanation(prediction_label, confidence)
+    # Extract entities
+    doc = nlp(text)
+    entities = []
+    seen = set()
     
-    return prediction_label, confidence, explanation
+    for ent in doc.ents:
+        if ent.label_ in ["PERSON", "ORG", "GPE"]:
+            entity_text = ent.text
+            if entity_text not in seen:
+                entities.append(entity_text)
+                seen.add(entity_text)
+    
+    return {
+        "label": label,
+        "score": score,
+        "entities": entities
+    }
 
