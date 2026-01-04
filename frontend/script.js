@@ -154,25 +154,75 @@ function displayResults(data) {
     const imageContextDiv = document.getElementById('image-context-result');
     if (imageContextDiv) {
         let html = '';
-        // Note: /analyze-full doesn't return image_context directly, but we can show if image was analyzed
-        if (data.reason && data.reason.includes('image')) {
-            html += `<p>Image analysis performed</p>`;
+        
+        // Check if image analysis was actually performed by checking for image_context field
+        const hasImageContext = data.image_context !== undefined && data.image_context !== null && data.image_context !== '';
+        
+        if (hasImageContext) {
+            html += `<p class="text-sm font-medium">Image analysis performed</p>`;
+            
+            // Show specific status based on image_context value
+            if (data.image_context === "Mismatch" || data.image_context === "Suspicious Mismatch") {
+                html += `<p class="text-sm mt-1 text-orange-600 dark:text-orange-400">Image–headline mismatch detected</p>`;
+            } else if (data.image_context === "Consistent") {
+                html += `<p class="text-sm mt-1 text-green-600 dark:text-green-400">Image matches the headline</p>`;
+            }
+            
+            // Show similarity score if available
+            if (data.similarity_score !== undefined && data.similarity_score !== null) {
+                html += `<p class="text-xs mt-1 text-subtext-light dark:text-subtext-dark">Similarity: ${(data.similarity_score * 100).toFixed(1)}%</p>`;
+            }
         } else {
-            html += `<p class="text-sm">No image provided</p>`;
+            // No image_context means no image was provided or analyzed
+            html += `<p class="text-sm text-subtext-light dark:text-subtext-dark">No image provided</p>`;
         }
-        imageContextDiv.innerHTML = html || '<p>No image analysis performed.</p>';
+        
+        imageContextDiv.innerHTML = html;
     }
     
-    // Display source verification
+    // Display source verification with dynamic messaging
     const sourceVerificationDiv = document.getElementById('source-verification-result');
     if (sourceVerificationDiv) {
         let html = '';
-        if (data.reason) {
+        
+        // Check if image was analyzed
+        const hasImageContext = data.image_context !== undefined && data.image_context !== null && data.image_context !== '';
+        const imageMismatch = hasImageContext && (data.image_context === "Mismatch" || data.image_context === "Suspicious Mismatch");
+        
+        // CASE 1: Verified by trusted source
+        if (data.verification_note && data.verification_note.includes("Verified by")) {
+            const sourceMatch = data.verification_note.match(/Verified by (.+)/);
+            const source = sourceMatch ? sourceMatch[1] : "trusted source";
+            html += `<p class="text-sm font-bold text-green-600 dark:text-green-400">✔ Claim verified by trusted source(s): ${source}</p>`;
+        }
+        // CASE 2: Unverified claim without image or with consistent image
+        else if (data.verification_note === "Unverified claim" && !imageMismatch) {
+            html += `<p class="text-sm text-text-light dark:text-text-dark">Text style appears neutral, but no confirmation was found from major trusted sources yet.</p>`;
+            html += `<p class="text-xs mt-1 text-subtext-light dark:text-subtext-dark italic">Breaking or regional news may take time to appear on global outlets.</p>`;
+        }
+        // CASE 3: Unverified claim with image mismatch
+        else if (data.verification_note === "Unverified claim" && imageMismatch) {
+            html += `<p class="text-sm text-text-light dark:text-text-dark">Claim is not confirmed by trusted sources and the image does not align with the text.</p>`;
+        }
+        // Fallback: show verification_note as-is if it exists
+        else if (data.verification_note) {
+            html += `<p class="text-sm">${data.verification_note}</p>`;
+        }
+        // Fallback: show reason if no verification_note
+        else if (data.reason) {
             html += `<p class="text-sm">${data.reason}</p>`;
         }
-        if (data.response_time_ms !== undefined) {
-            html += `<p class="text-xs mt-2 text-gray-500">Response: ${data.response_time_ms}ms</p>`;
+        
+        // CASE 4: Append cache note if cached
+        if (data.cached === true || data.cache_hit === true) {
+            html += `<p class="text-xs mt-2 text-subtext-light dark:text-subtext-dark italic">Previously analyzed result (cache hit).</p>`;
         }
+        
+        // Show response time if available
+        if (data.response_time_ms !== undefined) {
+            html += `<p class="text-xs mt-2 text-gray-500 dark:text-gray-400">Response: ${data.response_time_ms}ms</p>`;
+        }
+        
         sourceVerificationDiv.innerHTML = html || '<p>No verification data available.</p>';
     }
     
