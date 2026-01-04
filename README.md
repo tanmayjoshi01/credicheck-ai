@@ -50,10 +50,11 @@ The system emphasizes multi-signal analysis and transparency, providing users wi
 
 - **Python** (3.9+)
 - **Flask** – Web framework for REST API
+- **Flask-CORS** – Cross-origin resource sharing for frontend integration
 - **HuggingFace Transformers** – Model loading and inference
-- **RoBERTa** (`hamzab/roberta-fake-news-classification`) – Fake news text classification
-- **spaCy** (`en_core_web_sm`) – Named Entity Recognition
-- **CLIP** (`sentence-transformers/clip-ViT-B-32`) – Image-text semantic matching
+- **RoBERTa** (`hamzab/roberta-fake-news-classification`) – Fake news text classification (auto-downloaded from HuggingFace)
+- **spaCy** (`en_core_web_sm`) – Named Entity Recognition (manual download required)
+- **CLIP** (`sentence-transformers/clip-ViT-B-32`) – Image-text semantic matching (auto-downloaded from HuggingFace)
 - **DuckDuckGo Search** – External verification queries
 - **PyTorch (Torch)** – Deep learning framework
 - **scikit-learn** – Cosine similarity calculations
@@ -63,10 +64,11 @@ The system emphasizes multi-signal analysis and transparency, providing users wi
 
 - Python 3.9 or higher
 - Internet connection required for:
-  - Initial model downloads (HuggingFace Hub)
-  - External verification searches (DuckDuckGo)
+  - Initial model downloads from HuggingFace Hub (~1.1GB total)
+  - External verification searches (DuckDuckGo API)
 - CPU-based execution (no GPU required)
 - Minimum 4GB RAM recommended for model loading
+- ~2GB free disk space for model cache storage
 
 ## Installation Instructions
 
@@ -80,17 +82,22 @@ cd backend
 pip install -r requirements.txt
 ```
 
-3. Download the spaCy English model:
-```bash
-python -m spacy download en_core_web_sm
-```
-
-4. Install DuckDuckGo Search (if not included in requirements):
+3. Install DuckDuckGo Search (required for external verification):
 ```bash
 pip install duckduckgo-search
 ```
 
-Note: First-time model loading will download pre-trained models from HuggingFace Hub (requires internet connection). Models are cached locally after initial download.
+4. Download the spaCy English model (required for named entity recognition):
+```bash
+python -m spacy download en_core_web_sm
+```
+
+**Model Downloads (Automatic):**
+The following models are automatically downloaded from HuggingFace Hub on first run:
+- **RoBERTa Fake News Classifier** (`hamzab/roberta-fake-news-classification`) - ~500MB
+- **CLIP Model** (`sentence-transformers/clip-ViT-B-32`) - ~600MB
+
+**Note:** First-time server startup will download these models automatically (requires internet connection). Models are cached locally after initial download. Total download size: ~1.1GB. Subsequent startups use cached models and do not require internet.
 
 ## How to Run the Backend
 
