@@ -46,6 +46,7 @@
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
     </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     <div class="relative flex min-h-screen w-full flex-col">
@@ -79,7 +80,7 @@
                         <div class="flex flex-col">
                             <label class="flex flex-col flex-1">
                                 <p class="text-base font-medium leading-normal pb-2 text-text-light dark:text-text-dark">Paste news text here</p>
-                                <textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-auto rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark focus:border-primary/80 min-h-60 placeholder:text-subtext-light dark:placeholder:text-subtext-dark p-4 text-base font-normal leading-normal" placeholder="Enter the full text of the article or post..."></textarea>
+                                <textarea id="text-input" class="form-input flex w-full min-w-0 flex-1 resize-y overflow-auto rounded-lg text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark focus:border-primary/80 min-h-60 placeholder:text-subtext-light dark:placeholder:text-subtext-dark p-4 text-base font-normal leading-normal" placeholder="Enter the full text of the article or post..."></textarea>
                             </label>
                         </div>
                         <div class="flex flex-col">
@@ -90,15 +91,18 @@
                                     <p class="text-text-light dark:text-text-dark text-base font-semibold">Drag & drop an image here</p>
                                     <p class="text-subtext-light dark:text-subtext-dark text-sm">or click to browse</p>
                                 </div>
-                                <button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200 dark:bg-gray-700 text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-wide hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                <input type="file" id="image-input" accept="image/*" class="hidden">
+                                <label for="image-input" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200 dark:bg-gray-700 text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-wide hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                                     <span class="truncate">Browse Files</span>
-                                </button>
+                                </label>
                             </div>
+                            <div id="image-status" class="mt-2 text-center"></div>
+                            <div id="image-preview" class="mt-2 text-center"></div>
                         </div>
                     </div>
                     
                     <div class="flex justify-center mb-12">
-                        <button class="flex w-full md:w-auto min-w-[120px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-wide hover:bg-primary/90 transition-colors">
+                        <button id="analyze-button" class="flex w-full md:w-auto min-w-[120px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-12 px-6 bg-primary text-white text-base font-bold leading-normal tracking-wide hover:bg-primary/90 transition-colors">
                             <span class="material-symbols-outlined">query_stats</span>
                             <span class="truncate">Analyze</span>
                         </button>
@@ -108,26 +112,26 @@
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             <div class="rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
                                 <h3 class="text-lg font-semibold mb-3 text-text-light dark:text-text-dark">Text Analysis</h3>
-                                <div class="flex items-center justify-center h-24 rounded-md bg-background-light dark:bg-background-dark">
+                                <div id="text-analysis-result" class="flex items-center justify-center min-h-24 rounded-md bg-background-light dark:bg-background-dark p-4">
                                     <p class="text-sm text-subtext-light dark:text-subtext-dark">Results will appear here after analysis.</p>
                                 </div>
                             </div>
                             <div class="rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
                                 <h3 class="text-lg font-semibold mb-3 text-text-light dark:text-text-dark">Image Context</h3>
-                                <div class="flex items-center justify-center h-24 rounded-md bg-background-light dark:bg-background-dark">
+                                <div id="image-context-result" class="flex items-center justify-center min-h-24 rounded-md bg-background-light dark:bg-background-dark p-4">
                                     <p class="text-sm text-subtext-light dark:text-subtext-dark">Results will appear here after analysis.</p>
                                 </div>
                             </div>
                             <div class="rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
                                 <h3 class="text-lg font-semibold mb-3 text-text-light dark:text-text-dark">Source Verification</h3>
-                                <div class="flex items-center justify-center h-24 rounded-md bg-background-light dark:bg-background-dark">
+                                <div id="source-verification-result" class="flex items-center justify-center min-h-24 rounded-md bg-background-light dark:bg-background-dark p-4">
                                     <p class="text-sm text-subtext-light dark:text-subtext-dark">Results will appear here after analysis.</p>
                                 </div>
                             </div>
                         </div>
                         <div class="rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
                             <h3 class="text-xl font-bold mb-3 text-center text-primary">Final Verdict</h3>
-                            <div class="flex flex-col items-center justify-center h-20 rounded-md bg-background-light dark:bg-background-dark">
+                            <div id="final-verdict-result" class="flex flex-col items-center justify-center min-h-20 rounded-md bg-background-light dark:bg-background-dark p-4">
                                 <p class="text-sm text-subtext-light dark:text-subtext-dark">Results will appear here after analysis.</p>
                             </div>
                         </div>
@@ -136,6 +140,7 @@
             </div>
         </main>
     </div>
+    <script src="script.js"></script>
 </body>
 </html>
 

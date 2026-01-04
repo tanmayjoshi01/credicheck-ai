@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -10,6 +11,7 @@ import time
 from duckduckgo_search import DDGS
 
 app = Flask(__name__)
+CORS(app)
 
 cache = {}
 RESULTS_CACHE = {}

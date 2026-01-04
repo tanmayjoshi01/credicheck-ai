@@ -2,6 +2,7 @@ transformers
 torch
 pillow
 flask
+flask-cors
 spacy
 sentence-transformers
 scikit-learn
